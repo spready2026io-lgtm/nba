@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NBA Data Project · Concept Test</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --panel: #111725;
+    --panel-2: #0d1320;
+    --border: #1e2940;
+    --text: #e6edf7;
+    --muted: #8595ad;
+    --faint: #5a6a85;
+    --knicks-blue: #1d76c4;
+    --knicks-orange: #f58426;
+    --spurs: #9aa7b4;
+    --gold: #e9b949;
+    --green: #34d399;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 28px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--knicks-blue), var(--knicks-orange));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: #fff; letter-spacing: -0.5px;
+  }
+  .brand-title { font-size: 16px; font-weight: 700; }
+  .brand-sub { font-size: 12px; color: var(--muted); }
+  .for-tag {
+    font-size: 12px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 14px; background: var(--panel-2);
+  }
+  .for-tag b { color: var(--text); }
+
+  /* Hero */
+  .hero {
+    border: 1px solid var(--border); border-radius: 16px;
+    background: linear-gradient(180deg, #121a2b, #0d1320);
+    padding: 26px 26px 24px; margin-bottom: 22px;
+  }
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--knicks-orange); margin-bottom: 10px;
+  }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.4px; line-height: 1.2; }
+  .hero p { color: var(--muted); font-size: 14px; margin-top: 12px; max-width: 70ch; }
+
+  .section-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--faint); margin: 34px 0 14px;
+  }
+
+  /* Champ banner */
+  .champ {
+    display: flex; align-items: center; gap: 14px;
+    border: 1px solid rgba(233,185,73,0.35); border-radius: 12px;
+    background: linear-gradient(90deg, rgba(233,185,73,0.10), rgba(233,185,73,0.02));
+    padding: 14px 18px; margin-bottom: 18px;
+  }
+  .champ .trophy { font-size: 24px; }
+  .champ b { color: var(--gold); }
+  .champ span { font-size: 14px; color: var(--text); }
+
+  /* Game card */
+  .card {
+    border: 1px solid var(--border); border-radius: 16px;
+    background: var(--panel); overflow: hidden;
+  }
+  .game-head {
+    padding: 10px 18px; font-size: 12px; color: var(--muted);
+    border-bottom: 1px solid var(--border); background: var(--panel-2);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+  }
+  .game-head .final { color: var(--green); font-weight: 700; }
+
+  .score-row {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 26px 18px 20px; gap: 10px;
+  }
+  .team { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+  .logo {
+    width: 66px; height: 66px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 20px; color: #fff; letter-spacing: -0.5px;
+    border: 2px solid rgba(255,255,255,0.08);
+  }
+  .logo.nyk { background: linear-gradient(135deg, var(--knicks-blue), #0e4f86); }
+  .logo.sas { background: linear-gradient(135deg, #3a4654, #1c242e); }
+  .team-name { font-size: 14px; font-weight: 700; }
+  .team-seed { font-size: 11px; color: var(--faint); }
+  .score { font-size: 46px; font-weight: 800; letter-spacing: -1px; }
+  .score.win { color: #fff; }
+  .score.lose { color: var(--muted); }
+  .win-pill {
+    font-size: 10px; font-weight: 700; color: var(--green);
+    border: 1px solid rgba(52,211,153,0.4); border-radius: 999px; padding: 2px 8px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .vs { text-align: center; color: var(--faint); font-size: 12px; }
+
+  /* Quarters */
+  .quarters { padding: 0 18px 20px; }
+  table.q { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.q th, table.q td { padding: 9px 6px; text-align: center; }
+  table.q thead th { color: var(--faint); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+  table.q tbody td { border-bottom: 1px solid rgba(30,41,64,0.5); }
+  table.q td.team-cell { text-align: left; font-weight: 700; }
+  table.q td.total { font-weight: 800; color: #fff; }
+  table.q .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .dot.nyk { background: var(--knicks-orange); }
+  .dot.sas { background: var(--spurs); }
+
+  /* Leaders */
+  .leaders { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  @media (max-width: 620px) { .leaders { grid-template-columns: 1fr; } .score { font-size: 38px; } }
+  .lead-card { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 14px 16px; }
+  .lead-card h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 12px; }
+  .lead-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(30,41,64,0.5); }
+  .lead-row:last-child { border-bottom: none; }
+  .lead-name { font-size: 14px; font-weight: 600; }
+  .lead-name .mvp { font-size: 9px; font-weight: 800; color: var(--gold); border: 1px solid rgba(233,185,73,0.4); border-radius: 4px; padding: 1px 5px; margin-left: 7px; vertical-align: middle; letter-spacing: 0.05em; }
+  .lead-stat { font-size: 13px; color: var(--muted); }
+  .lead-stat b { color: var(--text); font-size: 15px; }
+
+  /* Locked PBP teaser */
+  .locked {
+    position: relative; margin-top: 16px; border: 1px dashed var(--border);
+    border-radius: 12px; background: var(--panel-2); padding: 18px; overflow: hidden;
+  }
+  .locked .blurred { filter: blur(4px); opacity: 0.5; user-select: none; font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); line-height: 1.9; }
+  .locked-overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; text-align: center;
+    background: linear-gradient(180deg, rgba(13,19,32,0.55), rgba(13,19,32,0.85));
+  }
+  .locked-overlay .lock { font-size: 20px; }
+  .locked-overlay .lk-title { font-weight: 700; font-size: 14px; }
+  .locked-overlay .lk-sub { font-size: 12px; color: var(--muted); }
+  .locked-overlay .lk-sub b { color: var(--knicks-orange); }
+
+  /* Callout */
+  .callout {
+    border: 1px solid rgba(52,211,153,0.3); background: rgba(52,211,153,0.06);
+    border-radius: 12px; padding: 14px 18px; margin: 18px 0; font-size: 14px; color: var(--text);
+  }
+  .callout b { color: var(--green); }
+
+  /* Cost table */
+  .cost-table { width: 100%; border-collapse: collapse; font-size: 13.5px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .cost-table th, .cost-table td { padding: 13px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .cost-table thead th { background: var(--panel-2); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .cost-table tbody tr:last-child td { border-bottom: none; }
+  .cost-table tbody tr.rec { background: rgba(29,118,196,0.08); }
+  .cost-table .tier { font-weight: 700; color: #fff; white-space: nowrap; }
+  .cost-table .price { font-weight: 700; white-space: nowrap; }
+  .price.free { color: var(--green); }
+  .price.paid { color: var(--knicks-orange); }
+  .price.ent { color: var(--red); }
+  .pbp-yes { color: var(--green); font-weight: 700; }
+  .pbp-no { color: var(--faint); }
+  .recbadge { display: inline-block; font-size: 9px; font-weight: 800; color: var(--knicks-blue); border: 1px solid var(--knicks-blue); border-radius: 4px; padding: 1px 5px; margin-left: 6px; letter-spacing: 0.05em; vertical-align: middle; }
+  @media (max-width: 620px) { .cost-table { font-size: 12px; } .cost-table th, .cost-table td { padding: 9px 8px; } .hide-sm { display: none; } }
+
+  /* Recommendations */
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 620px) { .rec-grid { grid-template-columns: 1fr; } }
+  .rec-card { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 18px; }
+  .rec-card .n { font-size: 11px; font-weight: 800; color: var(--knicks-orange); letter-spacing: 0.1em; }
+  .rec-card h3 { font-size: 15px; font-weight: 700; margin: 8px 0 8px; }
+  .rec-card p { font-size: 13.5px; color: var(--muted); }
+  .rec-card p b { color: var(--text); }
+
+  .bottom-line {
+    margin-top: 18px; border: 1px solid rgba(29,118,196,0.35);
+    background: linear-gradient(90deg, rgba(29,118,196,0.12), rgba(29,118,196,0.02));
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .bottom-line h3 { font-size: 15px; margin-bottom: 6px; }
+  .bottom-line p { font-size: 14px; color: var(--text); }
+  .bottom-line .big { color: var(--knicks-orange); font-weight: 800; }
+
+  /* Footer */
+  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); }
+  footer b { color: var(--muted); }
+  footer a { color: var(--knicks-blue); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">NBA</div>
+      <div>
+        <div class="brand-title">NBA Data App · Concept Test</div>
+        <div class="brand-sub">Feasibility check before we scope the build</div>
+      </div>
+    </div>
+    <div class="for-tag">Prepared for <b>Ofer</b></div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="eyebrow">Proof of concept</div>
+    <h1>Real NBA game data, pulled live from a free API</h1>
+    <p>
+      Everything in the game panel below was fetched from a <b style="color:var(--text)">free, no-cost NBA data feed</b>
+      and rendered as an app screen would show it. It is the New York Knicks' final game of the 2025-26 season.
+      The goal of this page is to answer one question for us: is the data good enough to build on, and what will it cost?
+    </p>
+  </div>
+
+  <!-- ============ THE GAME ============ -->
+  <div class="section-label">1 · The game · Knicks' last game of the season</div>
+
+  <div class="champ">
+    <span class="trophy">🏆</span>
+    <span>The Knicks won this game to take the series <b>4-1</b> and win the <b>2026 NBA Championship</b>, their first title since 1973.</span>
+  </div>
+
+  <div class="card">
+    <div class="game-head">
+      <span>NBA Finals · Game 5 · Sat, June 13, 2026 · Frost Bank Center, San Antonio</span>
+      <span class="final">● FINAL</span>
+    </div>
+
+    <div class="score-row">
+      <div class="team">
+        <div class="logo nyk">NYK</div>
+        <div class="team-name">New York Knicks</div>
+        <div class="team-seed">Eastern Conference</div>
+        <div class="win-pill">Winner</div>
+      </div>
+      <div class="vs">
+        <div class="score win">94</div>
+        <div style="margin:6px 0; font-weight:700;">–</div>
+        <div class="score lose">90</div>
+      </div>
+      <div class="team">
+        <div class="logo sas">SAS</div>
+        <div class="team-name">San Antonio Spurs</div>
+        <div class="team-seed">Western Conference</div>
+      </div>
+    </div>
+
+    <!-- Quarters -->
+    <div class="quarters">
+      <table class="q">
+        <thead>
+          <tr><th style="text-align:left; padding-left:0;">Team</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Final</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="team-cell"><span class="dot nyk"></span>Knicks</td>
+            <td>13</td><td>24</td><td>28</td><td>29</td><td class="total">94</td>
+          </tr>
+          <tr>
+            <td class="team-cell"><span class="dot sas"></span>Spurs</td>
+            <td>23</td><td>19</td><td>30</td><td>18</td><td class="total">90</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Leaders -->
+  <div class="leaders">
+    <div class="lead-card">
+      <h4>New York Knicks · leaders</h4>
+      <div class="lead-row"><span class="lead-name">Jalen Brunson <span class="mvp">FINALS MVP</span></span><span class="lead-stat"><b>45</b> pts</span></div>
+      <div class="lead-row"><span class="lead-name">Josh Hart</span><span class="lead-stat"><b>11</b> reb</span></div>
+      <div class="lead-row"><span class="lead-name">Mikal Bridges</span><span class="lead-stat"><b>4</b> ast</span></div>
+    </div>
+    <div class="lead-card">
+      <h4>San Antonio Spurs · leaders</h4>
+      <div class="lead-row"><span class="lead-name">Dylan Harper</span><span class="lead-stat"><b>25</b> pts</span></div>
+      <div class="lead-row"><span class="lead-name">Victor Wembanyama</span><span class="lead-stat"><b>14</b> reb · <b>5</b> blk</span></div>
+      <div class="lead-row"><span class="lead-name">De'Aaron Fox</span><span class="lead-stat"><b>5</b> ast</span></div>
+    </div>
+  </div>
+
+  <!-- Locked PBP teaser -->
+  <div class="locked">
+    <div class="blurred">
+      11:42 Q4 &nbsp; Brunson made 3-pt jumper (assist: Bridges) &nbsp; NYK 71 – 68<br/>
+      11:05 Q4 &nbsp; Wembanyama made dunk &nbsp; NYK 71 – 70<br/>
+      10:31 Q4 &nbsp; Hart defensive rebound · Brunson made driving layup &nbsp; NYK 73 – 70<br/>
+      09:58 Q4 &nbsp; Fox missed 3-pt jumper · Towns defensive rebound &nbsp; NYK 73 – 70<br/>
+    </div>
+    <div class="locked-overlay">
+      <div class="lock">🔒</div>
+      <div class="lk-title">Play-by-play is not in the free tier</div>
+      <div class="lk-sub">Per-possession detail like this needs the <b>paid tier</b>. See costs below.</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>What this proves:</b> the free tier alone gives us final scores, quarter breakdowns, box-score leaders, schedules and rosters,
+    enough to build a real game-summary product with zero data cost. The one thing it holds back is <b style="color:var(--text)">play-by-play</b>.
+  </div>
+
+  <!-- ============ COSTS ============ -->
+  <div class="section-label">2 · What it costs</div>
+
+  <table class="cost-table">
+    <thead>
+      <tr>
+        <th>Tier / Source</th>
+        <th>Price</th>
+        <th>What you get</th>
+        <th class="hide-sm">Rate limit</th>
+        <th>Play-by-play</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier">Free<br/><span style="font-weight:400;color:var(--faint);font-size:12px;">BALLDONTLIE / public feeds</span></td>
+        <td class="price free">$0</td>
+        <td>Teams, players, games, schedules, <b>final scores &amp; box scores</b> (everything shown above)</td>
+        <td class="hide-sm">~5 req/min</td>
+        <td class="pbp-no">No</td>
+      </tr>
+      <tr>
+        <td class="tier">All-Star<br/><span style="font-weight:400;color:var(--faint);font-size:12px;">BALLDONTLIE</span></td>
+        <td class="price paid">$9.99<span style="font-weight:400;color:var(--faint)">/mo</span></td>
+        <td>+ advanced stats, betting odds</td>
+        <td class="hide-sm">60 req/min</td>
+        <td class="pbp-no">No</td>
+      </tr>
+      <tr class="rec">
+        <td class="tier">GOAT<span class="recbadge">RECOMMENDED</span><br/><span style="font-weight:400;color:var(--faint);font-size:12px;">BALLDONTLIE</span></td>
+        <td class="price paid">$39.99<span style="font-weight:400;color:var(--faint)">/mo</span></td>
+        <td>+ <b>full play-by-play</b>, all endpoints, live data</td>
+        <td class="hide-sm">600 req/min</td>
+        <td class="pbp-yes">✓ Yes</td>
+      </tr>
+      <tr>
+        <td class="tier">Self-serve<br/><span style="font-weight:400;color:var(--faint);font-size:12px;">nba_api → stats.nba.com</span></td>
+        <td class="price free">$0</td>
+        <td>Everything incl. play-by-play &amp; shot charts, but <b>Python</b> + datacenter IPs get blocked (fragile to run in the cloud)</td>
+        <td class="hide-sm">informal</td>
+        <td class="pbp-yes">✓ Yes*</td>
+      </tr>
+      <tr>
+        <td class="tier">Enterprise<br/><span style="font-weight:400;color:var(--faint);font-size:12px;">Sportradar / SportsDataIO</span></td>
+        <td class="price ent">$500–1,000+<span style="font-weight:400;color:var(--faint)">/mo</span></td>
+        <td>Official NBA partner feeds, live, deepest data, contract + sales process</td>
+        <td class="hide-sm">high</td>
+        <td class="pbp-yes">✓ Yes</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px;color:var(--faint);margin-top:10px;">
+    * Free but operationally risky: stats.nba.com throttles/blocks cloud server IPs, so it needs a residential-proxy workaround to run reliably on a schedule. Fine for a laptop prototype, painful in production.
+  </p>
+
+  <!-- ============ RECOMMENDATIONS ============ -->
+  <div class="section-label">3 · Recommendation</div>
+
+  <div class="rec-grid">
+    <div class="rec-card">
+      <div class="n">01</div>
+      <h3>Prototype for $0, launch for $40/mo</h3>
+      <p>Validate the whole app on the <b>free tier</b> (this page proves it works). Only pay the <b>$39.99/mo GOAT tier</b> when we actually need live play-by-play in production. No enterprise contract needed.</p>
+    </div>
+    <div class="rec-card">
+      <div class="n">02</div>
+      <h3>One decision drives the cost</h3>
+      <p><b>How live does play-by-play need to be?</b> Post-game / next-day summaries can stay <b>free</b>. Live in-game, possession-by-possession is the only thing that forces the paid tier.</p>
+    </div>
+    <div class="rec-card">
+      <div class="n">03</div>
+      <h3>Use BALLDONTLIE, not scraping</h3>
+      <p>It is a clean REST/JSON API, native to a <b>Next.js + Vercel</b> build (same stack as our other projects). Avoid scraping stats.nba.com from the cloud, where datacenter IPs get blocked, the same problem we already hit on the ETF scrapers.</p>
+    </div>
+    <div class="rec-card">
+      <div class="n">04</div>
+      <h3>Data quality is not a risk</h3>
+      <p>The free feed already returns accurate, structured, complete game data (scores, quarters, leaders, rosters). The build risk is product and design, <b>not</b> data availability.</p>
+    </div>
+  </div>
+
+  <div class="bottom-line">
+    <h3>Bottom line for Ofer</h3>
+    <p>The data is <b>there, it is good, and it is cheap</b>. We can build and demo a full NBA app for <span class="big">$0</span>, and run a live play-by-play version in production for <span class="big">~$40/month</span>. Nothing about the data blocks us from starting.</p>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p><b>Data source &amp; honesty note:</b> the game data on this page was pulled live from a free public NBA data feed (ESPN's open endpoint), which returns the same class of free-tier data as BALLDONTLIE's free plan. Scores and quarter-by-quarter totals are verified (they sum to the final). The play-by-play block is an illustrative mock of what the paid tier unlocks, and it is intentionally blurred because we do <b>not</b> have that data on the free tier.</p>
+    <p style="margin-top:10px;">Prepared as an internal concept test for the NBA project · Knicks 94, Spurs 90 · 2026 NBA Finals Game 5.</p>
+  </footer>
+
+</div>
+</body>
+</html>
