@@ -1,0 +1,16 @@
+{
+    "hooks":  {
+                  "SessionStart":  [
+                                       {
+                                           "matcher":  "startup",
+                                           "hooks":  [
+                                                         {
+                                                             "type":  "command",
+                                                             "command":  "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\gadih\\Documents\\Private GH\\Obdisian Vault\\Claude_O2\\claude-session-start.ps1\"",
+                                                             "timeout":  180
+                                                         }
+                                                     ]
+                                       }
+                                   ]
+              }
+}
