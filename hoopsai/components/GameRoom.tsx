@@ -291,6 +291,8 @@ export default function GameRoom({ initial }: { initial: Payload }) {
             </div>
 
             <div className="p-4 space-y-3">
+              <ShimiChat game={cursorGame} wp={wp} vol={vol} mom={mom} spreadHome={game.spreadHome} adjustHome={payload.adjustHome} />
+
               {visibleInsights.length === 0 && (
                 <div className="label-faint">No major swings detected {cursor < 20 ? 'yet' : 'in this stretch'}. Shimi flags moves of 15%+ win probability.</div>
               )}
@@ -303,7 +305,6 @@ export default function GameRoom({ initial }: { initial: Payload }) {
                   </div>
                 </div>
               ))}
-              <ShimiChat game={cursorGame} wp={wp} vol={vol} mom={mom} spreadHome={game.spreadHome} adjustHome={payload.adjustHome} />
             </div>
           </div>
         </div>
