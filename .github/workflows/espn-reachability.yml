@@ -1,0 +1,146 @@
+name: espn-reachability
+
+# Answers one question: can a GitHub Actions runner read ESPN's open NBA API?
+# Vercel's serverless IPs get 403 Access Denied (measured 2026-08-30), which is
+# why production serves committed game data. If Actions is served, a scheduled
+# job can refresh that data during the season. If Actions is blocked too, the
+# live-season feed needs a proxy or a paid API.
+#
+# The run commits its own report back to the repo, so the result is auditable
+# and readable without the GitHub CLI.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/espn-reachability.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe ESPN endpoints
+        run: |
+          set -u
+          BROWSER_UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+          GAME=401859967
+          REPORT=hoopsai/scripts/espn-reachability-report.md
+          mkdir -p hoopsai/scripts
+
+          IP=$(curl -s --max-time 20 https://api.ipify.org || echo "unknown")
+          echo "runner public IP: $IP"
+
+          {
+            echo "# ESPN reachability from GitHub Actions"
+            echo
+            echo "Run: \`${GITHUB_RUN_ID}\` on \`${GITHUB_SHA}\`"
+            echo
+            echo "Runner public IP: \`${IP}\`"
+            echo
+            echo "| # | Endpoint | User-Agent | HTTP | Body is real JSON | Verdict |"
+            echo "|---|---|---|---|---|---|"
+          } > "$REPORT"
+
+          n=0
+          reached=0
+          blocked=0
+          other=0
+
+          probe () {
+            # $1 label, $2 url, $3 ua (empty = curl default), $4 jq expression that must be non-null
+            n=$((n+1))
+            local label="$1" url="$2" ua="$3" jqexpr="$4"
+            local code json verdict
+            if [ -n "$ua" ]; then
+              code=$(curl -s -o /tmp/body.json -w '%{http_code}' --max-time 25 -H "User-Agent: $ua" "$url" || echo "000")
+            else
+              code=$(curl -s -o /tmp/body.json -w '%{http_code}' --max-time 25 "$url" || echo "000")
+            fi
+
+            # A 200 that returns an HTML block page is NOT a pass, so assert content.
+            if jq -e "$jqexpr" /tmp/body.json > /dev/null 2>&1; then
+              json="yes"
+            else
+              json="no"
+            fi
+
+            if [ "$code" = "200" ] && [ "$json" = "yes" ]; then
+              verdict="REACHED"; reached=$((reached+1))
+            elif [ "$code" = "403" ]; then
+              verdict="BLOCKED-403"; blocked=$((blocked+1))
+            elif [ "$code" = "000" ]; then
+              verdict="NO-RESPONSE"; other=$((other+1))
+            else
+              verdict="UNEXPECTED-${code}"; other=$((other+1))
+            fi
+
+            local uaLabel="browser"
+            [ -z "$ua" ] && uaLabel="curl default"
+            echo "| $n | $label | $uaLabel | $code | $json | **$verdict** |" >> "$REPORT"
+            echo "probe $n $label -> $code json=$json verdict=$verdict"
+            head -c 160 /tmp/body.json | tr -d '\n' > /tmp/snippet.txt || true
+            echo "   body: $(cat /tmp/snippet.txt)"
+          }
+
+          probe "site.api scoreboard" \
+            "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard" \
+            "$BROWSER_UA" '.events'
+          probe "site.api summary (play-by-play)" \
+            "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${GAME}" \
+            "$BROWSER_UA" '.plays'
+          probe "site.api scoreboard" \
+            "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard" \
+            "" '.events'
+          probe "cdn.espn core scoreboard" \
+            "https://cdn.espn.com/core/nba/scoreboard?xhr=1" \
+            "$BROWSER_UA" '.content'
+          probe "site.web.api scoreboard" \
+            "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard" \
+            "$BROWSER_UA" '.events'
+          probe "sports.core.api events" \
+            "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events?limit=1" \
+            "$BROWSER_UA" '.items'
+
+          # The buckets must reconcile with the number of probes actually run.
+          total=$((reached+blocked+other))
+          if [ "$total" -ne "$n" ]; then
+            echo "bucket mismatch: ${total} != ${n}" >&2
+            exit 1
+          fi
+
+          {
+            echo
+            echo "## Verdict"
+            echo
+            echo "Probes run: **${n}**. Reached: **${reached}**. Blocked with 403: **${blocked}**. Other: **${other}**."
+            echo
+            if [ "$reached" -gt 0 ]; then
+              echo "GitHub Actions **CAN** reach ESPN on at least one endpoint. A scheduled job on"
+              echo "Actions can refresh committed game data during the season."
+            else
+              echo "GitHub Actions **CANNOT** reach ESPN on any endpoint tested. The live-season"
+              echo "feed needs a residential proxy or a paid API; Actions is not a way around the"
+              echo "datacenter block."
+            fi
+          } >> "$REPORT"
+
+          cat "$REPORT"
+
+      - name: Commit the report
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hoopsai/scripts/espn-reachability-report.md
+          if git diff --cached --quiet; then
+            echo "report unchanged, nothing to commit"
+            exit 0
+          fi
+          git commit -m "espn-reachability: probe result from a GitHub Actions runner"
+          git pull --rebase
+          git push
