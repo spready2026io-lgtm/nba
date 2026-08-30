@@ -13,10 +13,11 @@ export const revalidate = 60;
 export default async function Home() {
   const archive = archiveIndex as ArchiveEntry[];
   const board = await fetchScoreboard();
+  const feedAvailable = board !== null;
   // ESPN's dateless scoreboard returns the next scheduled slate in the off-season;
   // upcoming games have no plays yet, so they get schedule cards, not game rooms.
-  const playable = board.filter((g) => g.status !== 'pre');
-  const upcoming = board.filter((g) => g.status === 'pre');
+  const playable = (board ?? []).filter((g) => g.status !== 'pre');
+  const upcoming = (board ?? []).filter((g) => g.status === 'pre');
   const featured = archive.slice(0, 12);
 
   return (
@@ -99,7 +100,11 @@ export default async function Home() {
       )}
 
       <div className="label mt-10 mb-3">
-        {playable.length > 0 ? 'From the archive' : 'Off-season · latest recorded games'}
+        {playable.length > 0
+          ? 'From the archive'
+          : feedAvailable
+            ? 'No games right now · latest recorded games'
+            : 'Latest recorded games'}
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {featured.map((a) => (

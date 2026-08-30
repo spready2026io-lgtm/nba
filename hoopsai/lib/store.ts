@@ -1,37 +1,22 @@
 // Storage adapter. Local JSON files under .data/ in development; Vercel Blob in
-// production when BLOB_READ_WRITE_TOKEN is present (same pattern as Lizzy).
-// Collections are small (users, counters, sources), read-modify-write whole files.
+// production when BLOB_READ_WRITE_TOKEN is present.
 //
-// Two hardening notes (2026-08-30 review):
-// - Vercel Blob objects are public; collections holding PII (users) must not sit
-//   at a guessable path. Every blob path is namespaced under an HMAC of the
-//   collection name keyed by HOOPSAI_SECRET, so the URL is as secret as the key.
-// - Read-modify-write is serialized per collection via withLock. This holds
-//   within one server instance; concurrent writes from parallel serverless
-//   instances can still race. Acceptable at current traffic; a real KV store is
-//   the fix if counters ever need to be exact under load.
+// Blobs are written PRIVATE: users.json holds emails and pending verification
+// tokens, and uploads hold user documents, so none of it may sit behind a
+// public URL. Reads go through get() with the store token, never a plain fetch.
+// Reads also pass useCache:false, because a CDN-cached read in a
+// read-modify-write cycle silently reverts other writes.
+//
+// Write serialization (withLock) holds within one server instance; concurrent
+// writes from parallel serverless instances can still race. Acceptable at
+// current traffic. A real KV store is the fix if counters must be exact.
 
 import fs from 'node:fs/promises';
-import { createHmac } from 'node:crypto';
 import path from 'node:path';
 import type { Counters, UploadedSource, User } from './types';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
-
-function storeSecret(): string {
-  const s = process.env.HOOPSAI_SECRET;
-  if (s) return s;
-  if (process.env.NODE_ENV === 'production' && useBlob) {
-    throw new Error('HOOPSAI_SECRET must be set in production (blob paths are keyed by it)');
-  }
-  return 'hoopsai-dev-secret-not-for-production';
-}
-
-function blobPath(kind: 'store' | 'uploads', name: string): string {
-  const ns = createHmac('sha256', storeSecret()).update(`path:${kind}`).digest('hex').slice(0, 24);
-  return `${kind}-${ns}/${name}`;
-}
 
 async function blobModule() {
   return import('@vercel/blob');
@@ -52,17 +37,22 @@ export async function withLock<T>(name: string, fn: () => Promise<T>): Promise<T
   }
 }
 
+async function readBlobText(pathname: string): Promise<string | null> {
+  const { get } = await blobModule();
+  const res = await get(pathname, { access: 'private', useCache: false });
+  if (!res || !res.stream) return null;
+  return await new Response(res.stream).text();
+}
+
 async function readCollection<T>(name: string, fallback: T): Promise<T> {
   if (useBlob) {
     try {
-      const { list } = await blobModule();
-      const { blobs } = await list({ prefix: blobPath('store', `${name}.json`), limit: 1 });
-      if (blobs.length === 0) return fallback;
-      const r = await fetch(blobs[0].url, { cache: 'no-store' });
-      if (!r.ok) return fallback;
-      return (await r.json()) as T;
+      const raw = await readBlobText(`store/${name}.json`);
+      if (raw == null) return fallback;
+      return JSON.parse(raw) as T;
     } catch (e) {
-      console.error(`[store] blob read ${name} failed:`, e);
+      // BlobNotFoundError on first read is expected; anything else is a real fault
+      if ((e as Error)?.name !== 'BlobNotFoundError') console.error(`[store] blob read ${name} failed:`, e);
       return fallback;
     }
   }
@@ -79,8 +69,8 @@ async function readCollection<T>(name: string, fallback: T): Promise<T> {
 async function writeCollection<T>(name: string, value: T): Promise<void> {
   if (useBlob) {
     const { put } = await blobModule();
-    await put(blobPath('store', `${name}.json`), JSON.stringify(value), {
-      access: 'public',
+    await put(`store/${name}.json`, JSON.stringify(value), {
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -136,7 +126,7 @@ export async function addSource(entry: UploadedSource): Promise<void> {
 export async function saveUploadPayload(id: string, buf: Buffer, contentType: string): Promise<void> {
   if (useBlob) {
     const { put } = await blobModule();
-    await put(blobPath('uploads', id), buf, { access: 'public', contentType, addRandomSuffix: false, allowOverwrite: true });
+    await put(`uploads/${id}`, buf, { access: 'private', contentType, addRandomSuffix: false, allowOverwrite: true });
     return;
   }
   await fs.mkdir(path.join(DATA_DIR, 'uploads'), { recursive: true });
@@ -146,14 +136,12 @@ export async function saveUploadPayload(id: string, buf: Buffer, contentType: st
 export async function readUploadPayload(id: string): Promise<Buffer | null> {
   if (useBlob) {
     try {
-      const { list } = await blobModule();
-      const { blobs } = await list({ prefix: blobPath('uploads', id), limit: 1 });
-      if (blobs.length === 0) return null;
-      const r = await fetch(blobs[0].url, { cache: 'no-store' });
-      if (!r.ok) return null;
-      return Buffer.from(await r.arrayBuffer());
+      const { get } = await blobModule();
+      const res = await get(`uploads/${id}`, { access: 'private', useCache: false });
+      if (!res || !res.stream) return null;
+      return Buffer.from(await new Response(res.stream).arrayBuffer());
     } catch (e) {
-      console.error(`[store] blob upload read ${id} failed:`, e);
+      if ((e as Error)?.name !== 'BlobNotFoundError') console.error(`[store] blob upload read ${id} failed:`, e);
       return null;
     }
   }

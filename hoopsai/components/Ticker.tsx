@@ -10,7 +10,7 @@ import type { TickerGame } from '@/app/api/games/route';
 
 export default function Ticker() {
   const [games, setGames] = useState<TickerGame[]>([]);
-  const [offseason, setOffseason] = useState(false);
+  const [note, setNote] = useState('');
   const [clock, setClock] = useState('');
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -20,7 +20,13 @@ export default function Ticker() {
       if (!r.ok) return;
       const d = await r.json();
       setGames(d.games ?? []);
-      setOffseason(!!d.offseason);
+      setNote(
+        d.source === 'live'
+          ? ''
+          : d.feedAvailable
+            ? 'no games today · latest recorded games'
+            : 'live feed unavailable · latest recorded games'
+      );
     } catch {
       // keep the last good ticker on transient failures
     }
@@ -101,9 +107,7 @@ export default function Ticker() {
             </Link>
           );
         })}
-        {offseason && games.length > 0 && (
-          <div className="flex items-center px-4 shrink-0 label-faint">off-season · latest recorded games</div>
-        )}
+        {note && games.length > 0 && <div className="flex items-center px-4 shrink-0 label-faint">{note}</div>}
       </div>
 
       <div className="flex items-center gap-3 px-4 shrink-0 border-l" style={{ borderColor: 'var(--border)' }}>

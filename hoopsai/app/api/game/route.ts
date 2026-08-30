@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGame } from '@/lib/espn';
+import { readCommittedGame } from '@/lib/game-data';
 import { currentUser } from '@/lib/auth';
 import { getSources } from '@/lib/store';
 
@@ -14,7 +15,9 @@ export async function GET(req: NextRequest) {
   if (!id || !/^\d{5,12}$/.test(id)) {
     return NextResponse.json({ error: 'bad game id' }, { status: 400 });
   }
-  const game = await fetchGame(id);
+  // live feed first for a game in progress, committed data otherwise; the
+  // committed copy is also the fallback when the feed refuses us
+  const game = (await fetchGame(id)) ?? readCommittedGame(id);
   if (!game) return NextResponse.json({ error: 'game not found' }, { status: 404 });
 
   let adjustHome: number | null = null;

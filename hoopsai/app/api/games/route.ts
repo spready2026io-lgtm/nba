@@ -29,8 +29,9 @@ export async function GET() {
   const sparkById = new Map(archive.map((a) => [a.id, a]));
 
   const board = await fetchScoreboard();
+  const feedOk = board !== null;
   // pre games have no play-by-play, so their game rooms 404; keep them out
-  const active = board.filter((g) => g.status !== 'pre');
+  const active = (board ?? []).filter((g) => g.status !== 'pre');
 
   let games: TickerGame[];
   if (active.length > 0) {
@@ -65,7 +66,13 @@ export async function GET() {
       live: false,
     }));
   }
-  return NextResponse.json({ games, offseason: active.length === 0 });
+  // "no games right now" and "we could not read the feed" are different facts
+  // and must never render as the same sentence
+  return NextResponse.json({
+    games,
+    source: active.length > 0 ? 'live' : 'archive',
+    feedAvailable: feedOk,
+  });
 }
 
 function closingMove(spark: number[]): number | null {

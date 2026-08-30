@@ -7,16 +7,27 @@ import type { GameData, GameStatus, PlayDetail, ReducedPlay, ScoreboardGame } fr
 
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
 
+// ESPN 403s custom UA strings (measured 2026-08-30); a plain browser UA passes.
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+  Accept: 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  Referer: 'https://www.espn.com/',
+  Origin: 'https://www.espn.com',
+};
+
 async function getJSON(url: string, revalidateSec: number): Promise<Record<string, unknown> | null> {
+  // Every failure states its reason: a silent null here is undiagnosable in production.
   try {
-    const r = await fetch(url, {
-      // ESPN 403s custom UA strings (measured 2026-08-30); a plain browser UA passes.
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36' },
-      next: { revalidate: revalidateSec },
-    });
-    if (!r.ok) return null;
+    const r = await fetch(url, { headers: BROWSER_HEADERS, next: { revalidate: revalidateSec } });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      console.error(`[espn] ${r.status} ${r.statusText} for ${url} :: ${body.slice(0, 200)}`);
+      return null;
+    }
     return (await r.json()) as Record<string, unknown>;
-  } catch {
+  } catch (e) {
+    console.error(`[espn] fetch threw for ${url}:`, e);
     return null;
   }
 }
@@ -43,10 +54,14 @@ export function parseClock(v: unknown): number | null {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export async function fetchScoreboard(dateYYYYMMDD?: string): Promise<ScoreboardGame[]> {
+// Returns null when the feed could NOT be read, [] when it was read and held no
+// games. A caller that cannot tell those apart reports a broken feed as a quiet
+// off-season, which is the failure this estate keeps relearning.
+export async function fetchScoreboard(dateYYYYMMDD?: string): Promise<ScoreboardGame[] | null> {
   const url = dateYYYYMMDD ? `${BASE}/scoreboard?dates=${dateYYYYMMDD}` : `${BASE}/scoreboard`;
   const d = (await getJSON(url, 30)) as any;
-  if (!d?.events) return [];
+  if (!d) return null;
+  if (!d.events) return [];
   const games: ScoreboardGame[] = [];
   for (const e of d.events) {
     const comp = e.competitions?.[0];
