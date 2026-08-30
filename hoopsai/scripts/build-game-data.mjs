@@ -18,7 +18,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, '..', 'public', 'games');
 const ARCHIVE = path.join(__dirname, '..', 'data', 'archive-index.json');
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 const INCLUDE_TEXT = process.env.INCLUDE_TEXT !== '0';
 
@@ -29,7 +28,9 @@ const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
 async function getJSON(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { headers: { 'User-Agent': UA } });
+      // Send no User-Agent: claiming to be a browser is what earns a 403 from a
+      // datacenter, so this also works unchanged on a GitHub Actions runner.
+      const r = await fetch(url);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return await r.json();
     } catch (e) {

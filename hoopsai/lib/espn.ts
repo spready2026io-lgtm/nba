@@ -5,31 +5,35 @@
 
 import type { GameData, GameStatus, PlayDetail, ReducedPlay, ScoreboardGame } from './types';
 
-const BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
 
-// ESPN 403s custom UA strings (measured 2026-08-30); a plain browser UA passes.
-const BROWSER_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-  Accept: 'application/json, text/plain, */*',
-  'Accept-Language': 'en-US,en;q=0.9',
-  Referer: 'https://www.espn.com/',
-  Origin: 'https://www.espn.com',
-};
+// Send NO User-Agent. Measured 2026-08-30 across three networks: ESPN's edge
+// blocks a claimed browser UA whose client fingerprint is not a browser, which
+// is why the "fix" of pretending to be Chrome is exactly what earns a 403 from a
+// datacenter. Requests that do not claim to be a browser are served everywhere
+// we tested, including Vercel and GitHub Actions runners.
+//
+// site.web.api is the same API on a second host, kept as a fallback because it
+// served play-by-play from a runner even under the UA that site.api refused.
+const HOSTS = [
+  'https://site.api.espn.com/apis/site/v2/sports/basketball/nba',
+  'https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba',
+];
 
-async function getJSON(url: string, revalidateSec: number): Promise<Record<string, unknown> | null> {
-  // Every failure states its reason: a silent null here is undiagnosable in production.
-  try {
-    const r = await fetch(url, { headers: BROWSER_HEADERS, next: { revalidate: revalidateSec } });
-    if (!r.ok) {
+async function getJSON(pathAndQuery: string, revalidateSec: number): Promise<Record<string, unknown> | null> {
+  // Every failure states its reason and its host: a silent null here is
+  // undiagnosable in production, which already cost one deploy to learn.
+  for (let i = 0; i < HOSTS.length; i++) {
+    const url = `${HOSTS[i]}${pathAndQuery}`;
+    try {
+      const r = await fetch(url, { next: { revalidate: revalidateSec } });
+      if (r.ok) return (await r.json()) as Record<string, unknown>;
       const body = await r.text().catch(() => '');
-      console.error(`[espn] ${r.status} ${r.statusText} for ${url} :: ${body.slice(0, 200)}`);
-      return null;
+      console.error(`[espn] ${r.status} ${r.statusText} for ${url} :: ${body.slice(0, 160)}`);
+    } catch (e) {
+      console.error(`[espn] fetch threw for ${url}:`, e);
     }
-    return (await r.json()) as Record<string, unknown>;
-  } catch (e) {
-    console.error(`[espn] fetch threw for ${url}:`, e);
-    return null;
   }
+  return null;
 }
 
 function statusOf(t: unknown): { status: GameStatus; detail: string } {
@@ -58,8 +62,8 @@ export function parseClock(v: unknown): number | null {
 // games. A caller that cannot tell those apart reports a broken feed as a quiet
 // off-season, which is the failure this estate keeps relearning.
 export async function fetchScoreboard(dateYYYYMMDD?: string): Promise<ScoreboardGame[] | null> {
-  const url = dateYYYYMMDD ? `${BASE}/scoreboard?dates=${dateYYYYMMDD}` : `${BASE}/scoreboard`;
-  const d = (await getJSON(url, 30)) as any;
+  const path = dateYYYYMMDD ? `/scoreboard?dates=${dateYYYYMMDD}` : '/scoreboard';
+  const d = (await getJSON(path, 30)) as any;
   if (!d) return null;
   if (!d.events) return [];
   const games: ScoreboardGame[] = [];
@@ -83,7 +87,7 @@ export async function fetchScoreboard(dateYYYYMMDD?: string): Promise<Scoreboard
 
 export async function fetchGame(id: string): Promise<GameData | null> {
   // Live games refresh fast; finished games are immutable so cache long.
-  const probe = (await getJSON(`${BASE}/summary?event=${id}`, 15)) as any;
+  const probe = (await getJSON(`/summary?event=${id}`, 15)) as any;
   if (!probe?.header) return null;
   const d = probe;
   const comp = d.header?.competitions?.[0];

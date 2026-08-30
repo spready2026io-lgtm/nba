@@ -29,8 +29,9 @@ const BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
 async function getJSON(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
     try {
-      // ESPN 403s custom UA strings (measured 2026-08-30); a plain browser UA passes.
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36' } });
+      // Send no User-Agent: ESPN blocks a claimed browser UA whose client is not
+      // a browser, so pretending to be Chrome is what gets refused off-desktop.
+      const r = await fetch(url);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return await r.json();
     } catch (e) {
