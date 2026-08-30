@@ -1,0 +1,138 @@
+name: espn-pbp-probe
+
+# The first probe showed something odd: from the same runner IP, site.api.espn.com
+# returned 403 to curl carrying a browser User-Agent and 200 to curl carrying its
+# own default User-Agent. That is client-fingerprint filtering, not an IP block,
+# and it means the first run did NOT answer the question production actually asks.
+#
+# This probe tests the combination our scripts really use (Node fetch) against the
+# endpoint that really matters (summary, which carries play-by-play), across the
+# candidate hosts and User-Agent variants. A pass must return real plays, not a
+# 200 with a block page.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/espn-pbp-probe.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write the probe script
+        run: |
+          mkdir -p /tmp/probe
+          cat > /tmp/probe/probe.mjs <<'PROBEEOF'
+          const GAME = '401859967';
+          const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+          const CURLISH_UA = 'curl/8.5.0';
+
+          const cases = [
+            { label: 'site.api summary', host: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=' + GAME, ua: BROWSER_UA },
+            { label: 'site.api summary', host: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=' + GAME, ua: null },
+            { label: 'site.api summary', host: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=' + GAME, ua: CURLISH_UA },
+            { label: 'site.web.api summary', host: 'https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=' + GAME, ua: BROWSER_UA },
+            { label: 'site.web.api summary', host: 'https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=' + GAME, ua: null },
+            { label: 'cdn.espn playbyplay', host: 'https://cdn.espn.com/core/nba/playbyplay?gameId=' + GAME + '&xhr=1', ua: BROWSER_UA },
+            { label: 'cdn.espn playbyplay', host: 'https://cdn.espn.com/core/nba/playbyplay?gameId=' + GAME + '&xhr=1', ua: null },
+            { label: 'site.api scoreboard', host: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', ua: null },
+            { label: 'site.web.api scoreboard', host: 'https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', ua: BROWSER_UA },
+          ];
+
+          // Count plays wherever this response shape happens to keep them.
+          function countPlays(json) {
+            if (!json || typeof json !== 'object') return 0;
+            if (Array.isArray(json.plays)) return json.plays.length;
+            const gp = json.gamepackageJSON;
+            if (gp && Array.isArray(gp.plays)) return gp.plays.length;
+            if (json.content && json.content.gamepackage) {
+              const g = json.content.gamepackage;
+              if (Array.isArray(g.pbp)) return g.pbp.length;
+              if (g.pbp && Array.isArray(g.pbp.playGrps)) return g.pbp.playGrps.flat().length;
+            }
+            return 0;
+          }
+
+          const rows = [];
+          for (const c of cases) {
+            const headers = c.ua ? { 'User-Agent': c.ua } : {};
+            const uaLabel = c.ua === BROWSER_UA ? 'browser' : c.ua === CURLISH_UA ? 'curl-string' : 'node default';
+            let status = '000';
+            let plays = 0;
+            let note = '';
+            try {
+              const r = await fetch(c.host, { headers });
+              status = String(r.status);
+              const text = await r.text();
+              try {
+                plays = countPlays(JSON.parse(text));
+              } catch {
+                note = 'body is not JSON';
+              }
+            } catch (e) {
+              note = 'fetch threw: ' + e.message;
+            }
+            // A pass must carry real plays; a scoreboard case passes on status alone.
+            const wantsPlays = c.label.indexOf('scoreboard') === -1;
+            const verdict = status === '200' && (!wantsPlays || plays > 0)
+              ? 'REACHED'
+              : status === '403' ? 'BLOCKED-403'
+              : status === '000' ? 'NO-RESPONSE' : 'UNEXPECTED-' + status;
+            rows.push({ label: c.label, uaLabel, status, plays, verdict, note });
+            console.log(c.label, '|', uaLabel, '|', status, '| plays', plays, '|', verdict, note);
+          }
+
+          const lines = [];
+          lines.push('# ESPN play-by-play reachability from GitHub Actions');
+          lines.push('');
+          lines.push('Client: Node ' + process.version + ' fetch, the same client the build scripts use.');
+          lines.push('');
+          lines.push('| # | Endpoint | User-Agent | HTTP | Plays returned | Verdict |');
+          lines.push('|---|---|---|---|---|---|');
+          rows.forEach((r, i) => {
+            lines.push('| ' + (i + 1) + ' | ' + r.label + ' | ' + r.uaLabel + ' | ' + r.status + ' | ' + r.plays + ' | **' + r.verdict + '** ' + r.note + ' |');
+          });
+          const winners = rows.filter((r) => r.verdict === 'REACHED' && r.plays > 0);
+          lines.push('');
+          lines.push('## Verdict');
+          lines.push('');
+          lines.push('Probes: **' + rows.length + '**. Reached: **' + rows.filter((r) => r.verdict === 'REACHED').length + '**. Blocked 403: **' + rows.filter((r) => r.verdict === 'BLOCKED-403').length + '**.');
+          lines.push('');
+          if (winners.length > 0) {
+            lines.push('Play-by-play IS retrievable from a GitHub Actions runner. Working combinations:');
+            lines.push('');
+            winners.forEach((w) => lines.push('- `' + w.label + '` with User-Agent **' + w.uaLabel + '**, ' + w.plays + ' plays'));
+            lines.push('');
+            lines.push('A scheduled Actions job can therefore refresh committed game data in season.');
+          } else {
+            lines.push('Play-by-play is NOT retrievable from a GitHub Actions runner on any tested');
+            lines.push('combination. The in-season feed needs a residential proxy or a paid API.');
+          }
+          const fs = await import('node:fs');
+          fs.mkdirSync('hoopsai/scripts', { recursive: true });
+          fs.writeFileSync('hoopsai/scripts/espn-pbp-report.md', lines.join('\n') + '\n');
+          PROBEEOF
+          echo "script written"
+
+      - name: Run the probe
+        run: node /tmp/probe/probe.mjs
+
+      - name: Commit the report
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hoopsai/scripts/espn-pbp-report.md
+          if git diff --cached --quiet; then
+            echo "report unchanged, nothing to commit"
+            exit 0
+          fi
+          git commit -m "espn-pbp-probe: play-by-play reachability result from a runner"
+          git pull --rebase
+          git push
