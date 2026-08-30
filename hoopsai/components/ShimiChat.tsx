@@ -24,11 +24,17 @@ export default function ShimiChat({ game, wp, vol, mom, spreadHome, adjustHome }
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  // Pin the transcript to its newest message by scrolling the list's OWN box.
+  // scrollIntoView would scroll every ancestor including the document, so on
+  // mount it dragged the whole page down to the chat and a game room opened
+  // partway down instead of at the top.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [messages]);
+    if (messages.length === 0) return;
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, busy]);
 
   const send = async (text: string) => {
     const t = text.trim();
@@ -69,7 +75,13 @@ export default function ShimiChat({ game, wp, vol, mom, spreadHome, adjustHome }
 
   return (
     <div>
-      <div className="space-y-2 max-h-64 overflow-y-auto" role="log" aria-live="polite" aria-label="conversation with Shimi">
+      <div
+        ref={listRef}
+        className="space-y-2 max-h-64 overflow-y-auto"
+        role="log"
+        aria-live="polite"
+        aria-label="conversation with Shimi"
+      >
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
@@ -82,7 +94,6 @@ export default function ShimiChat({ game, wp, vol, mom, spreadHome, adjustHome }
           </div>
         ))}
         {busy && <div className="label-faint">Shimi is running the numbers...</div>}
-        <div ref={endRef} />
       </div>
 
       <div className="flex gap-2 mt-3">
