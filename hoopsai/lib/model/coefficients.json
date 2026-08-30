@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "trainedAt": "2026-08-30T09:22:02.379Z",
+  "source": "ESPN open API, 2025-26 season (regular season sampled every 3rd day + full play-in/playoffs)",
+  "games": 524,
+  "gamesHoldout": 105,
+  "rowsTrain": 202404,
+  "rowsHoldout": 51006,
+  "features": [
+    "intercept",
+    "margin / sqrt(secRemaining + 8)",
+    "-pregameHomeSpread * min(1, secRemaining/2880)",
+    "margin"
+  ],
+  "coefficients": [
+    0.26407669028216624,
+    5.449390198961543,
+    0.12361493357904135,
+    -0.009023027482697208
+  ],
+  "volatilityP95": 9.216103045440578,
+  "metrics": {
+    "train": {
+      "logLoss": 0.4210762248104327,
+      "brier": 0.14037671169135468,
+      "accuracy": 0.7887739372739669,
+      "n": 202404
+    },
+    "holdout": {
+      "logLoss": 0.5273406003621902,
+      "brier": 0.17905463926012,
+      "accuracy": 0.7400305846371015,
+      "n": 51006
+    },
+    "espnHoldoutBenchmark": {
+      "brier": 0.17230258100088422,
+      "n": 50876
+    }
+  }
+}

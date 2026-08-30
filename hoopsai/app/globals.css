@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+/* HoopsAi design tokens. Dark terminal aesthetic from Ofer's MagicPath mocks:
+   near-black ground, hairline panels, neon green vs signal red, monospace data. */
+:root {
+  --bg: #060807;
+  --bg-grid: rgba(255, 255, 255, 0.025);
+  --panel: #0b0e0d;
+  --panel-2: #0e1211;
+  --panel-3: #121716;
+  --border: #1b211f;
+  --border-strong: #29322f;
+  --text: #e9f2ec;
+  --muted: #7d8d84;
+  --faint: #66766d; /* kept above ~4.5:1 on --bg; it carries real content at small sizes */
+  --green: #4dff66;
+  --green-dim: #2bcc4a;
+  --green-glow: rgba(77, 255, 102, 0.35);
+  --red: #ff3648;
+  --red-dim: #cc2231;
+  --amber: #ffb224;
+  --blue: #3f8cff;
+  --font-mono: var(--font-jetbrains), ui-monospace, "Cascadia Code", Consolas, monospace;
+  --font-sans: var(--font-inter), -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+body {
+  background:
+    linear-gradient(var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+    var(--bg);
+  background-size: 44px 44px, 44px 44px, auto;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+::selection { background: rgba(77, 255, 102, 0.25); }
+
+/* scrollbars in the terminal spirit */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+/* ---- shared primitives ---- */
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.label-faint {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.panel-inset {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.headline {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-amber { color: var(--amber); }
+.text-blue { color: var(--blue); }
+.text-muted { color: var(--muted); }
+.text-faint { color: var(--faint); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--panel-3);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-green {
+  background: var(--green);
+  border-color: var(--green);
+  color: #04170a;
+}
+.btn-green:hover { background: #6aff80; border-color: #6aff80; }
+
+.btn-ghost {
+  background: transparent;
+}
+
+.input {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input::placeholder { color: var(--faint); }
+.input:focus { border-color: var(--green-dim); }
+
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+.dot-red { background: var(--red); }
+.dot-amber { background: var(--amber); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.dot-live { animation: pulse-dot 1.6s ease-in-out infinite; }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* The Print Summary button is only honest if printing produces a legible page:
+   flip to light, hide the interactive chrome, keep the chart and stats. */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --bg-grid: transparent;
+    --panel: #ffffff;
+    --panel-2: #f4f6f5;
+    --panel-3: #eceeed;
+    --border: #c9d0cc;
+    --border-strong: #a9b2ad;
+    --text: #111512;
+    --muted: #3d4742;
+    --faint: #5a645e;
+    --green: #0a7a2a;
+    --green-dim: #0a7a2a;
+    --red: #b3121f;
+    --amber: #8a5b00;
+    --blue: #1c4fa0;
+  }
+  body { background: #ffffff; font-size: 12px; }
+  nav, footer, button, input, .no-print { display: none !important; }
+  a { color: var(--text); text-decoration: none; }
+  .panel, .panel-inset { border-color: var(--border); background: #ffffff; }
+}
