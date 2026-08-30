@@ -26,12 +26,12 @@ export default async function Home() {
         <span className="dot dot-green" /> Live analytics / Dashboard
       </div>
       <h1 className="headline text-4xl md:text-5xl">
-        The data centre for NBA punters<span className="text-green">.</span>
+        Every possession moves the odds<span className="text-green">.</span>
       </h1>
       <p className="text-muted mt-3 max-w-xl text-[13.5px] leading-relaxed">
-        Win probability on every game, play by play, from Shimi&apos;s model. Trained on{' '}
-        {modelMeta.rowsTrain.toLocaleString()} real play states from {modelMeta.gamesTrain} NBA games, validated on{' '}
-        {modelMeta.gamesHoldout} more it never saw.
+        HoopsAi puts an AI model on the game beside you: live win probability, momentum and volatility, read from real
+        NBA play by play. Trained on {modelMeta.rowsTrain.toLocaleString()} play states from {modelMeta.gamesTrain} games,
+        validated on {modelMeta.gamesHoldout} more it never saw.
       </p>
 
       {/* model proof strip */}

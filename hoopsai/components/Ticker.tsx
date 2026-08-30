@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Sparkline from './Sparkline';
+import Logo from './Logo';
 import type { TickerGame } from '@/app/api/games/route';
 
 export default function Ticker() {
@@ -61,14 +62,9 @@ export default function Ticker() {
 
   return (
     <div className="flex items-stretch border-b" style={{ borderColor: 'var(--border)', background: '#050706' }}>
-      <Link href="/" className="flex items-center gap-2 px-4 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
-        <span
-          className="flex items-center justify-center w-6 h-6 rounded font-bold text-[13px]"
-          style={{ background: 'var(--blue)', color: '#fff' }}
-        >
-          H
-        </span>
-        <span className="font-bold tracking-[0.08em] text-[13px]">HOOPS AI</span>
+      <Link href="/" className="flex items-center gap-2.5 px-4 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
+        <Logo size={24} title="HoopsAi" />
+        <span className="font-bold tracking-[0.08em] text-[13px]">HOOPSAI</span>
       </Link>
 
       <div ref={scroller} className="flex-1 flex items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
