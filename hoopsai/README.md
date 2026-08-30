@@ -22,10 +22,12 @@ the same adapter (decision 2026-08-30).
 Vercel project `hoopsai` on `spready2026io-5260s-projects`, production at
 **hoopsai.vercel.app**. Deploy with `npx vercel deploy --prod` from this folder.
 
-**Git auto-deploy is deliberately disconnected.** The app lives in a subfolder of
-the NBA repo while the project's Root Directory is `.`, so a git-triggered build
-would deploy the repo root (the old concept page) to production. Set Root
-Directory to `hoopsai` in the project settings, then `vercel git connect`.
+**Git auto-deploy is on.** Root Directory is `hoopsai`, so a push to `main`
+builds this subfolder and not the repo root. Set with
+`vercel project update hoopsai --root-directory hoopsai --yes`. Note that
+`vercel inspect --json` carries no git provenance, so confirm a git deploy by
+the sequence (a production deployment nobody ran by hand) and by what the site
+actually serves.
 
 **ESPN 403s datacenter IPs**, so the deployed site cannot fetch play-by-play.
 Production serves all 524 archived games from `public/games/*.json`, built by
