@@ -17,6 +17,26 @@ collections in Vercel Blob (production) or `.data/` (local). Data source: ESPN's
 NBA API through `lib/espn.ts`; if it proves fragile, BALLDONTLIE GOAT slots in behind
 the same adapter (decision 2026-08-30).
 
+## Deployment (live)
+
+Vercel project `hoopsai` on `spready2026io-5260s-projects`, production at
+**hoopsai.vercel.app**. Deploy with `npx vercel deploy --prod` from this folder.
+
+**Git auto-deploy is deliberately disconnected.** The app lives in a subfolder of
+the NBA repo while the project's Root Directory is `.`, so a git-triggered build
+would deploy the repo root (the old concept page) to production. Set Root
+Directory to `hoopsai` in the project settings, then `vercel git connect`.
+
+**ESPN 403s datacenter IPs**, so the deployed site cannot fetch play-by-play.
+Production serves all 524 archived games from `public/games/*.json`, built by
+`node scripts/build-game-data.mjs` on a machine ESPN serves (re-runs skip files
+that already exist). The live feed is still tried first, for games in progress.
+A live-season feed is an open decision: see `M-memory 1/decisions.md`.
+
+`hoopsai.com` is not attached yet: it is claimed by another Vercel account and
+currently redirects to dealsize.ai. DNS already points at Vercel, so once it is
+released, `vercel domains add hoopsai.com hoopsai` verifies immediately.
+
 ## The model
 
 `scripts/train-model.mjs` fetches play-by-play (cached in `scripts/cache/`), fits a
@@ -39,7 +59,12 @@ site replays recorded games as the live experience.
 | `RESEND_API_KEY` | verification emails | verify link shown on screen (dev mode) |
 | `MAIL_FROM` | sender identity | `HoopsAi <onboarding@resend.dev>` |
 | `ANTHROPIC_API_KEY` | Shimi chat + PDF reading (claude-opus-5) | deterministic model-math replies |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage | local `.data/` JSON files |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage (PRIVATE store) | local `.data/` JSON files |
+
+Set in production today: `HOOPSAI_SECRET`, `BLOB_READ_WRITE_TOKEN`. Not set, and
+each one closes a feature until it is: `RESEND_API_KEY` (registration returns 502
+and no one can sign up), `ADMIN_PASSWORD` (/admin returns 503), `ANTHROPIC_API_KEY`
+(Shimi answers from model math only). All three fail closed by design.
 
 ## Run
 
