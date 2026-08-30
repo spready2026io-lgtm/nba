@@ -131,14 +131,6 @@ export default function ShimiChat({ game, wp, vol, mom, spreadHome, adjustHome }
           ➤
         </button>
       </div>
-      <div className="flex flex-wrap gap-2 mt-2">
-        {CHIPS.map((c) => (
-          <button key={c} className="btn btn-ghost !py-1.5 !px-3 !text-[10px]" onClick={() => send(c)} disabled={busy}>
-            {c}
-          </button>
-        ))}
-      </div>
-
       {(messages.length > 0 || busy) && (
         <div
           ref={listRef}
@@ -171,6 +163,17 @@ export default function ShimiChat({ game, wp, vol, mom, spreadHome, adjustHome }
           {busy && <div className="label-faint">Shimi is running the numbers...</div>}
         </div>
       )}
+
+      {/* The chips follow the transcript, so they sit under the input while the
+          conversation is empty and under Shimi's latest answer once it is not.
+          Either way they are the next thing to do, at the end of the flow. */}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {CHIPS.map((c) => (
+          <button key={c} className="btn btn-ghost !py-1.5 !px-3 !text-[10px]" onClick={() => send(c)} disabled={busy}>
+            {c}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
