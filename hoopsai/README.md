@@ -63,10 +63,17 @@ site replays recorded games as the live experience.
 | `ANTHROPIC_API_KEY` | Shimi chat + PDF reading (claude-opus-5) | deterministic model-math replies |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage (PRIVATE store) | local `.data/` JSON files |
 
-Set in production today: `HOOPSAI_SECRET`, `BLOB_READ_WRITE_TOKEN`. Not set, and
-each one closes a feature until it is: `RESEND_API_KEY` (registration returns 502
-and no one can sign up), `ADMIN_PASSWORD` (/admin returns 503), `ANTHROPIC_API_KEY`
-(Shimi answers from model math only). All three fail closed by design.
+Set in production: `HOOPSAI_SECRET`, `BLOB_READ_WRITE_TOKEN`, `ADMIN_PASSWORD`
+(also Preview), `ANTHROPIC_API_KEY` (Production only, so preview builds fall back
+to Shimi's deterministic replies, which is deliberate: preview traffic should not
+spend on the model).
+
+Still unset: **`RESEND_API_KEY`**, and until it is, registration returns 502 and
+nobody can sign up. That is fail-closed by design, since the alternative is
+leaking a verification token.
+
+**Env vars only reach deployments built after they are set.** Adding one and not
+redeploying leaves the site behaving exactly as if it were missing.
 
 ## Run
 
